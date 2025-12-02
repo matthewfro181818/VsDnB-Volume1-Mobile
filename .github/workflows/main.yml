@@ -15,17 +15,17 @@ jobs:
         os: [windows-latest, ubuntu-latest, macos-latest]
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Haxe
-        uses: krdlab/setup-haxe@master
+      - uses: krdlab/setup-haxe@master
         with:
           haxe-version: 4.3.6
 
-      - name: Install libVLC (Linux)
+      - name: Install VLC (Linux)
         if: startsWith(matrix.os, 'ubuntu')
-        run: sudo apt install libvlc-dev libvlccore-dev
+        run: |
+          sudo apt update
+          sudo apt install -y libvlc-dev libvlccore-dev
 
       - name: Install Libraries
         run: |
@@ -33,48 +33,41 @@ jobs:
           haxelib install lime
           haxelib install openfl
           haxelib install flixel
-          haxelib install flixel-tools
           haxelib install flixel-ui
           haxelib install flixel-addons
-          haxelib install actuate
-          haxelib install tjson
-          haxelib install hxjsonast
-          haxelib install hxCodec
-          haxelib install hscript-iris
+          haxelib install flxanimate
+          haxelib install json2object
+          haxelib install hscript
+          haxelib install polymod
           haxelib install hxvlc
           haxelib git discord_rpc https://github.com/Aidan63/linc_discord-rpc
-          haxelib install hmm
-          haxelib run hmm install
 
-      - name: Compile (Windows)
+      - name: Build Windows
         if: startsWith(matrix.os, 'windows')
         run: haxelib run lime build windows -D officialBuild
 
-      - name: Compile (Linux)
+      - name: Build Linux
         if: startsWith(matrix.os, 'ubuntu')
         run: haxelib run lime build linux -D officialBuild
 
-      - name: Compile (macOS)
+      - name: Build macOS
         if: startsWith(matrix.os, 'macos')
         run: haxelib run lime build mac -D officialBuild
 
-      - name: Upload Artifact (Windows)
+      - uses: actions/upload-artifact@v4
         if: startsWith(matrix.os, 'windows')
-        uses: actions/upload-artifact@v4
         with:
           name: windowsBuild
           path: export/release/windows/bin/*
 
-      - name: Upload Artifact (Linux)
+      - uses: actions/upload-artifact@v4
         if: startsWith(matrix.os, 'ubuntu')
-        uses: actions/upload-artifact@v4
         with:
           name: linuxBuild
           path: export/release/linux/bin/*
 
-      - name: Upload Artifact (macOS)
+      - uses: actions/upload-artifact@v4
         if: startsWith(matrix.os, 'macos')
-        uses: actions/upload-artifact@v4
         with:
           name: macOSBuild
           path: export/release/macos/bin/*
@@ -89,41 +82,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Haxe
-        uses: krdlab/setup-haxe@master
+      - uses: krdlab/setup-haxe@master
         with:
           haxe-version: 4.3.6
 
-      # --------------------------- ANDROID TOOLCHAIN ---------------------------
-
-      - name: Install Android SDK + NDK (Working Action)
+      - name: Setup Android SDK + NDK
         if: startsWith(matrix.os, 'ubuntu')
-        uses: android-actions/setup-android@v2
+        uses: android-actions/setup-android@v3
         with:
           api-level: 33
-          ndk-version: 23.1.7779620
-          build-tools-version: 33.0.2
+          ndk: 25.1.8937393
+          cmake: 3.22.1
 
-      - name: Install Haxelib
+      - name: Install Libraries
         run: |
           haxelib install hxcpp
           haxelib install lime
           haxelib install openfl
           haxelib install flixel
-          haxelib install flixel-tools
           haxelib install flixel-ui
           haxelib install flixel-addons
-          haxelib install actuate
-          haxelib install tjson
-          haxelib install hxjsonast
-          haxelib install hxCodec
-          haxelib install hscript-iris
+          haxelib install flxanimate
+          haxelib install json2object
+          haxelib install hscript
+          haxelib install polymod
           haxelib install hxvlc
           haxelib git discord_rpc https://github.com/Aidan63/linc_discord-rpc
-          haxelib install hmm
-          haxelib run hmm install
 
-      - name: Configure Android for Lime
+      - name: Configure Android
         if: startsWith(matrix.os, 'ubuntu')
         run: |
           haxelib run lime config ANDROID_SDK $ANDROID_SDK_ROOT
@@ -131,15 +117,13 @@ jobs:
           haxelib run lime config JAVA_HOME $JAVA_HOME_17_X64
           haxelib run lime config ANDROID_SETUP true
 
-      - name: Build Android (ARMv7)
+      - name: Build Android
         if: startsWith(matrix.os, 'ubuntu')
-        run: haxelib run lime build android -D officialBuild -D HXCPP_NO_PCH -ONLY_ARMV7
-
-      # ------------------------------ iOS BUILD ------------------------------
+        run: haxelib run lime build android -D officialBuild -ONLY_ARMV7
 
       - name: Build iOS
         if: startsWith(matrix.os, 'macos')
-        run: haxelib run lime build ios -D officialBuild -nosign
+        run: haxelib run lime build ios -nosign -D officialBuild
 
       - name: Package IPA
         if: startsWith(matrix.os, 'macos')
@@ -149,18 +133,14 @@ jobs:
           mv *.app Payload
           zip -r VsDave.ipa Payload
 
-      # ------------------------------ ARTIFACTS ------------------------------
-
-      - name: Upload Android
+      - uses: actions/upload-artifact@v4
         if: startsWith(matrix.os, 'ubuntu')
-        uses: actions/upload-artifact@v4
         with:
           name: androidBuild
           path: export/release/android/bin/app/build/outputs/apk/release/*.apk
 
-      - name: Upload iOS
+      - uses: actions/upload-artifact@v4
         if: startsWith(matrix.os, 'macos')
-        uses: actions/upload-artifact@v4
         with:
           name: iOSBuild
-          path: export/release/ios/build/*-iphoneos/*.ipa
+          path: export/release/ios/build/Release-iphoneos/*.ipa
